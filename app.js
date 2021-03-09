@@ -17,7 +17,9 @@ mongoose.connect('mongodb+srv://saurabhkhaparey:vtplrs@cluster0.pjprl.mongodb.ne
     useUnifiedTopology: true
 })
 
-app.listen(3000, () => console.log('Server running at port 3000'))
+let PORT = process.env.PORT || 3000
+
+app.listen(PORT, () => console.log('Server running at port 3000'))
 
 const locationSchema = new mongoose.Schema({
     latitude: String,
