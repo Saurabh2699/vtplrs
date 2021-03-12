@@ -3,8 +3,9 @@ const bodyParser = require('body-parser')
 const jwt = require('jsonwebtoken')
 const mongoose = require('mongoose')
 const bcrypt = require('bcryptjs')
-// const multer = require('multer')
-// const upload = multer({dest: 'uploads/'})
+const multer = require('multer')
+const fs = require('fs')
+const path = require('path')
 
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: false }))
@@ -69,7 +70,9 @@ const userSchema = new mongoose.Schema({
         required: true
     },
     photo: {
-
+        image: Buffer,
+        contentType: String,
+        path: String
     }
 })
 
@@ -98,6 +101,19 @@ userSchema.statics.comparePassword = async (email, password) => {
 }
 
 const User = new mongoose.model('user', userSchema)
+
+// storage
+
+var Storage = multer.diskStorage({
+    destination: "uploads",
+    filename: (req, file, cb) => {
+        cb(null, file.fieldname + " " + Date.now() + path.extname(file.originalname))
+    }
+})
+
+var upload = multer({
+    storage: Storage
+})
 
 //register new user
 
@@ -255,8 +271,33 @@ app.get('/get-recent-locations', async (req, res) => {
 
 })
 
-// upload user photo
+// upload user profile
+app.post('/upload-user-photo', upload.single('user-image'), async (req, res, next) => {
+    const id = req.body.deviceId
+    const img = fs.readFileSync(req.file.path)
+    var encode_img = img.toString('base64')
 
-// app.post('/upload-user-pic',upload.single('userImage'),(req,res) => {
-//     console.log(req.file)
-// })
+    // define a json object
+    const finalImage = {
+        contentType: req.file.mimetype,
+        path: req.file.path,
+        image: new Buffer(encode_img, 'base64')
+    }
+
+    try {
+        const user = await User.findOneAndUpdate(
+            { deviceId: id },
+            {
+                $set: {
+                    photo: finalImage
+                }
+            }
+        )
+
+        res.status(201).json({ message: "File uploade successfully..." })
+    } catch (err) {
+        console.log(err)
+        res.status(401).json({ message: "Image cannot be uploaded...." })
+    }
+
+})
